@@ -123,6 +123,12 @@ func EditDynamicWithCallback(defval, prompt string, refresh func(int, int), call
 			cursor = termutil.RunewidthStr(buffer)
 		}
 	}
+	// HACK: If the prompt starts with a tab, allow tabs to be input.
+	allowTabs := false
+	if prompt[0] == '\t' {
+		allowTabs = true
+		prompt = prompt[1:]
+	}
 	iw := termutil.RunewidthStr(prompt + ": ")
 	for {
 		buflen := len(buffer)
@@ -265,6 +271,12 @@ func EditDynamicWithCallback(defval, prompt string, refresh func(int, int), call
 			if buflen > 0 && bufpos < buflen {
 				bufpos = forwardWordIndex(buffer, bufpos)
 				cursor = termutil.RunewidthStr(buffer[:bufpos])
+			}
+		case "C-i", "TAB":
+			if allowTabs {
+				buffer = buffer[:bufpos] + "\t" + buffer[bufpos:]
+				bufpos++
+				cursor++
 			}
 		default:
 			if utf8.RuneCountInString(key) == 1 {
