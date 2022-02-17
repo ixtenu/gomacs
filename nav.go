@@ -196,6 +196,24 @@ func MoveCursorForthPage() {
 	}
 }
 
+// Functionally equivalent to editorPrompt except that it allows inputting tabs.
+// Used for all search and find/replace prompts.
+func searchPrompt(prompt string, callback func(string, string)) string {
+	// Convert callback into dynamic callback
+	var callbackDynamic func(string, string) string
+	if callback != nil {
+		callbackDynamic = func(buffer, key string) string {
+			callback(buffer, key)
+			return buffer
+		}
+	}
+	// Only EditDynamicWithCallbackAndTabs (not its higher-level wrappers) has
+	// the option to allow inputting tabs
+	ret := EditDynamicWithCallbackAndTabs("", prompt, true, func(int, int) { editorRefreshScreen() }, callbackDynamic)
+	Global.Input = ret
+	return ret
+}
+
 // HACK: Go does not have static variables, so these have to go in global state.
 var last_match int = -1
 var direction int = 1
@@ -255,7 +273,7 @@ func editorFind() {
 	saved_cy := Global.CurrentB.cy
 	saved_ro := Global.CurrentB.rowoff
 
-	query := editorPrompt("Search", editorFindCallback)
+	query := searchPrompt("Search", editorFindCallback)
 
 	if query == "" {
 		//Search cancelled, go back to where we were
@@ -268,13 +286,13 @@ func editorFind() {
 }
 
 func doQueryReplace() {
-	orig := editorPrompt("Find", nil)
+	orig := searchPrompt("Find", nil)
 	if orig == "" {
 		Global.Input = "Can't query-replace with an empty query"
 		return
 	}
 	defer func() { Global.CurrentB.regionActive = false }()
-	replace := editorPrompt("Replace "+orig+" with", nil)
+	replace := searchPrompt("Replace "+orig+" with", nil)
 	all := false
 	ql := len(orig)
 	rlen := len(replace)
@@ -325,12 +343,12 @@ func doQueryReplace() {
 }
 
 func doReplaceString() {
-	orig := editorPrompt("Find", nil)
+	orig := searchPrompt("Find", nil)
 	if orig == "" {
 		Global.Input = "Can't string-replace with an empty query"
 		return
 	}
-	replace := editorPrompt("Replace "+orig+" with", nil)
+	replace := searchPrompt("Replace "+orig+" with", nil)
 	matches := 0
 	lines := 0
 	ql := len(orig)
@@ -362,7 +380,7 @@ func doReplaceString() {
 }
 
 func doQueryReplaceRegexp() {
-	orig := editorPrompt("Find regexp", nil)
+	orig := searchPrompt("Find regexp", nil)
 	if orig == "" {
 		Global.Input = "Can't query-replace-regexp with an empty query"
 		return
@@ -373,7 +391,7 @@ func doQueryReplaceRegexp() {
 		Global.Input = "Couldn't compile regexp " + orig + ": " + err.Error()
 		return
 	}
-	replace := editorPrompt("Replace "+orig+" with", nil)
+	replace := searchPrompt("Replace "+orig+" with", nil)
 	all := false
 	for cy, row := range Global.CurrentB.Rows {
 		match := pattern.FindStringIndex(row.Data)
@@ -423,7 +441,7 @@ func doQueryReplaceRegexp() {
 }
 
 func doReplaceRegexp() {
-	orig := editorPrompt("Find regexp", nil)
+	orig := searchPrompt("Find regexp", nil)
 	if orig == "" {
 		Global.Input = "Can't replace-regexp with an empty query"
 		return
@@ -433,7 +451,7 @@ func doReplaceRegexp() {
 		Global.Input = "Couldn't compile regexp " + orig + ": " + err.Error()
 		return
 	}
-	replace := editorPrompt("Replace "+orig+" with", nil)
+	replace := searchPrompt("Replace "+orig+" with", nil)
 	matches := 0
 	lines := 0
 	for cy, row := range Global.CurrentB.Rows {

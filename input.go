@@ -104,6 +104,12 @@ func DynamicPromptWithCallback(prompt string, refresh func(int, int), callback f
 // function, and callback. It allows the user to edit the default
 // value. It returns what the user entered.
 func EditDynamicWithCallback(defval, prompt string, refresh func(int, int), callback func(string, string) string) string {
+	return EditDynamicWithCallbackAndTabs(defval, prompt, false, refresh, callback)
+}
+
+// Same as EditDynamicWithCallback, except that it optionally
+// allows inputting tabs.
+func EditDynamicWithCallbackAndTabs(defval, prompt string, allowTabs bool, refresh func(int, int), callback func(string, string) string) string {
 	var buffer string
 	var bufpos, cursor, offset int
 	if defval == "" {
@@ -265,6 +271,12 @@ func EditDynamicWithCallback(defval, prompt string, refresh func(int, int), call
 			if buflen > 0 && bufpos < buflen {
 				bufpos = forwardWordIndex(buffer, bufpos)
 				cursor = termutil.RunewidthStr(buffer[:bufpos])
+			}
+		case "C-i", "TAB":
+			if allowTabs {
+				buffer = buffer[:bufpos] + "\t" + buffer[bufpos:]
+				bufpos++
+				cursor++
 			}
 		default:
 			if utf8.RuneCountInString(key) == 1 {
